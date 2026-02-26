@@ -1,1 +1,0 @@
-savedcmd_/workspaces/Linux-Device-Drivers-Intro/simple_char_driver/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /workspaces/Linux-Device-Drivers-Intro/simple_char_driver/Module.symvers -T /workspaces/Linux-Device-Drivers-Intro/simple_char_driver/modules.order -i Module.symvers -e 
