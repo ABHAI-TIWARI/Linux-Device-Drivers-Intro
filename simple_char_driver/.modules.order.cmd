@@ -1,0 +1,1 @@
+savedcmd_/workspaces/Linux-Device-Drivers-Intro/simple_char_driver/modules.order := {   echo /workspaces/Linux-Device-Drivers-Intro/simple_char_driver/simple_char_driver.o; :; } > /workspaces/Linux-Device-Drivers-Intro/simple_char_driver/modules.order
