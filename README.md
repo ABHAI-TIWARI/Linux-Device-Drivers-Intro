@@ -2,5 +2,5 @@
 
 ### Tutorials
 
-1. simple_char_driver.md
-2. user intractable_driver.md
+1. simple_char_driver
+2. user intractable_driver
