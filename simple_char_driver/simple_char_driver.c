@@ -115,7 +115,7 @@ static void __exit simple_driver_exit(void)
 	pr_info("simple_char: unloaded\n");
 }
 
-module_init(simple_driver_init);
+modul e_init(simple_driver_init);
 module_exit(simple_driver_exit);
 
 MODULE_LICENSE("GPL");
