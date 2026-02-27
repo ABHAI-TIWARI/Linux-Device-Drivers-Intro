@@ -72,3 +72,36 @@ Stop those processes and try `rmmod` again.
     3. Adds the reference to a linked list that has all the loaded modules.
 
 4. `module_init` listed function
+
+
+
+=======================================================
+
+
+## rmmod module
+
+1. `rmmod` calls `delete_module()` which hints the kernel that a module is to be removed.
+
+    1. Control is transferred to the kernel.
+
+2. kernel executes `sys_delete_module()`
+
+    1. Checks the permissions of the one requesting.
+
+    2. Checks if any other loaded module needs the current module.
+
+    3. Checks if the module is actually loaded!
+
+    4. Executes the function provided in `module_exit`
+
+    5. `free_module()`
+
+        1. removes references and kernel object reference.
+
+        2. performs any other cleanup.
+
+        3. Unloads the module
+
+        4. Changes the state in list
+
+        5. Removes it from the list and frees the memory.
