@@ -1,0 +1,1 @@
+savedcmd_/workspaces/Linux-Device-Drivers-Intro/user_intractable_driver/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /workspaces/Linux-Device-Drivers-Intro/user_intractable_driver/Module.symvers -T /workspaces/Linux-Device-Drivers-Intro/user_intractable_driver/modules.order -i Module.symvers -e 
