@@ -2,16 +2,17 @@
 
 ## What this driver does (first)
 
-This is a **Linux character device driver** that creates a device node:
+This is a **Linux character device driver** that creates:
 
 - `/dev/user_interactable`
+- `/proc/user_interactable`
 
-It allows user-space programs to interact with kernel space in a simple way:
+It allows user-space programs to interact with kernel space in two ways:
 
-- **Write** text from user space into the driver (using `echo` or any file write).
-- **Read** back the currently stored text from the driver (using `cat` or any file read).
+- **Character device path**: read/write using `/dev/user_interactable`
+- **proc filesystem path**: read/write using `/proc/user_interactable`
 
-So it demonstrates two-way interaction: user -> kernel (`write`) and kernel -> user (`read`).
+So it demonstrates two-way interaction: user -> kernel (`write`) and kernel -> user (`read`) using both `/dev` and `/proc` interfaces.
 
 ---
 
@@ -76,6 +77,32 @@ sudo dmesg | tail -n 30
 
 ## How to interact with the driver
 
+### Proc filesystem tutorial (primary)
+
+After loading the module, use `/proc/user_interactable`:
+
+1) Read default message:
+
+```bash
+cat /proc/user_interactable
+```
+
+2) Write a new message:
+
+```bash
+echo "Hello via procfs" | sudo tee /proc/user_interactable > /dev/null
+```
+
+3) Read again:
+
+```bash
+cat /proc/user_interactable
+```
+
+The last write becomes the new message stored by the driver.
+
+### Character device path (also supported)
+
 ### 1) Read default message
 
 ```bash
@@ -99,6 +126,8 @@ cat /dev/user_interactable
 ```
 
 Now it should print your new text.
+
+Both `/dev/user_interactable` and `/proc/user_interactable` operate on the same internal buffer.
 
 ---
 
@@ -136,6 +165,17 @@ cat /sys/class/user_interactable_class/user_interactable/dev
 sudo mknod /dev/user_interactable c 240 0
 sudo chmod 666 /dev/user_interactable
 ```
+
+### `/proc/user_interactable` not present
+
+Check whether module loaded correctly:
+
+```bash
+lsmod | grep user_interactable_driver
+sudo dmesg | tail -n 30
+```
+
+If module load failed, fix the load/build error first; `/proc` entry is created during module init.
 
 ### `insmod: ERROR: could not insert module ... Invalid module format`
 

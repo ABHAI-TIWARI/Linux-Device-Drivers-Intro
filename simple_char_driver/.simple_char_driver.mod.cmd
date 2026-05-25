@@ -1,1 +1,0 @@
-savedcmd_/workspaces/Linux-Device-Drivers-Intro/simple_char_driver/simple_char_driver.mod := printf '%s\n'   simple_char_driver.o | awk '!x[$$0]++ { print("/workspaces/Linux-Device-Drivers-Intro/simple_char_driver/"$$0) }' > /workspaces/Linux-Device-Drivers-Intro/simple_char_driver/simple_char_driver.mod

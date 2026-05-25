@@ -5,12 +5,14 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/proc_fs.h>
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/uaccess.h>
 
 #define DEVICE_NAME "user_interactable"
 #define CLASS_NAME  "user_interactable_class"
+#define PROC_NAME   "user_interactable"
 #define BUFFER_SIZE 256
 
 MODULE_LICENSE("GPL");
@@ -29,6 +31,7 @@ struct user_interactable_device {
 	struct cdev cdev;
 	struct class *class;
 	struct device *device;
+	struct proc_dir_entry *proc_entry;
 	char *buffer;
 	size_t data_len;
 	struct mutex lock;
@@ -133,6 +136,74 @@ static const struct file_operations user_interactable_fops = {
 };
 
 /*
+ * proc_read()/proc_write() expose the same driver buffer through /proc.
+ * This gives a second interaction path besides /dev/user_interactable.
+ */
+static ssize_t user_interactable_proc_read(struct file *file,
+					   char __user *user_buf,
+					   size_t count,
+					   loff_t *offset)
+{
+	size_t bytes_to_copy;
+
+	if (*offset < 0)
+		return -EINVAL;
+
+	mutex_lock(&ui_dev.lock);
+
+	if (*offset >= ui_dev.data_len) {
+		mutex_unlock(&ui_dev.lock);
+		return 0;
+	}
+
+	bytes_to_copy = min(count, ui_dev.data_len - (size_t)*offset);
+
+	if (copy_to_user(user_buf, ui_dev.buffer + *offset, bytes_to_copy)) {
+		mutex_unlock(&ui_dev.lock);
+		return -EFAULT;
+	}
+
+	*offset += bytes_to_copy;
+	mutex_unlock(&ui_dev.lock);
+
+	pr_info("user_interactable: proc read %zu bytes\n", bytes_to_copy);
+	return bytes_to_copy;
+}
+
+static ssize_t user_interactable_proc_write(struct file *file,
+					    const char __user *user_buf,
+					    size_t count,
+					    loff_t *offset)
+{
+	size_t bytes_to_copy;
+
+	if (count == 0)
+		return 0;
+
+	bytes_to_copy = min(count, (size_t)(BUFFER_SIZE - 1));
+
+	mutex_lock(&ui_dev.lock);
+
+	if (copy_from_user(ui_dev.buffer, user_buf, bytes_to_copy)) {
+		mutex_unlock(&ui_dev.lock);
+		return -EFAULT;
+	}
+
+	ui_dev.buffer[bytes_to_copy] = '\0';
+	ui_dev.data_len = bytes_to_copy;
+	*offset = 0;
+	mutex_unlock(&ui_dev.lock);
+
+	pr_info("user_interactable: proc wrote %zu bytes\n", bytes_to_copy);
+	return bytes_to_copy;
+}
+
+static const struct proc_ops user_interactable_proc_ops = {
+	.proc_read = user_interactable_proc_read,
+	.proc_write = user_interactable_proc_write,
+};
+
+/*
  * Module initialization:
  * 1) allocate char-device numbers,
  * 2) initialize and add cdev,
@@ -177,10 +248,19 @@ static int __init user_interactable_init(void)
 	strscpy(ui_dev.buffer, default_message, BUFFER_SIZE);
 	ui_dev.data_len = strlen(ui_dev.buffer);
 
+	ui_dev.proc_entry = proc_create(PROC_NAME, 0666, NULL, &user_interactable_proc_ops);
+	if (!ui_dev.proc_entry) {
+		ret = -ENOMEM;
+		goto err_kfree;
+	}
+
 	pr_info("user_interactable: loaded (major=%d minor=%d)\n",
 		MAJOR(ui_dev.dev_num), MINOR(ui_dev.dev_num));
+	pr_info("user_interactable: proc entry available at /proc/%s\n", PROC_NAME);
 	return 0;
 
+err_kfree:
+	kfree(ui_dev.buffer);
 err_device_destroy:
 	device_destroy(ui_dev.class, ui_dev.dev_num);
 err_class_destroy:
@@ -197,6 +277,9 @@ err_unregister:
  */
 static void __exit user_interactable_exit(void)
 {
+	if (ui_dev.proc_entry)
+		proc_remove(ui_dev.proc_entry);
+
 	kfree(ui_dev.buffer);
 	device_destroy(ui_dev.class, ui_dev.dev_num);
 	class_destroy(ui_dev.class);
